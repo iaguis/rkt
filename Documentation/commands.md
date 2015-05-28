@@ -325,8 +325,6 @@ In this case, the logs can be accessed directly via journalctl.
 
 #### Accessing logs via journalctl
 
-[journalctl-M-bug]: https://github.com/coreos/rkt/issues/947
-
 To get the logs you need to get pod's machine name. You can use machinectl
 
 ```
@@ -355,7 +353,7 @@ $ journalctl -m _HOSTNAME=rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
 [...]
 ```
 
-rkt doesn't integrate with `journalctl -M` yet (see [#947][journalctl-M-bug)
+rkt doesn't integrate with `journalctl -M` yet (see coreos/rkt#947)
 
 ### rkt status
 
