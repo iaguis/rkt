@@ -353,7 +353,7 @@ $ journalctl -m _HOSTNAME=rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
 [...]
 ```
 
-rkt doesn't integrate with `journalctl -M` yet (see coreos/rkt#947)
+rkt doesn't integrate with `journalctl -M` yet (see https://github.com/coreos/rkt/issues/947)
 
 ### rkt status
 
