@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -31,17 +33,18 @@ import (
 var (
 	globalFlagset = flag.NewFlagSet("inspect", flag.ExitOnError)
 	globalFlags   = struct {
-		ReadStdin    bool
-		CheckTty     bool
-		PrintMsg     string
-		PrintEnv     string
-		PrintCapsPid int
-		PrintUser    bool
-		CheckCwd     string
-		ExitCode     int
-		ReadFile     bool
-		WriteFile    bool
-		Sleep        int
+		ReadStdin        bool
+		CheckTty         bool
+		PrintMsg         string
+		PrintEnv         string
+		PrintCapsPid     int
+		PrintUser        bool
+		CheckCwd         string
+		ExitCode         int
+		ReadFile         bool
+		WriteFile        bool
+		Sleep            int
+		PrintMemoryLimit bool
 	}{}
 )
 
@@ -57,6 +60,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
+	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
 }
 
 func main() {
@@ -172,5 +176,45 @@ func main() {
 		time.Sleep(time.Duration(globalFlags.Sleep) * time.Second)
 	}
 
+	if globalFlags.PrintMemoryLimit {
+		cgroupPath, err := getOwnCgroupPath("memory")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting own memory cgroup path: %v\n", err)
+			os.Exit(1)
+		}
+		memCgroupPath := filepath.Join("/sys/fs/cgroup", "memory", cgroupPath)
+
+		// we use /proc/1/root to escape the chroot we're in and read our
+		// memory limit
+		limitInBytesPath := filepath.Join("/proc/1/root/", memCgroupPath, "memory.limit_in_bytes")
+
+		limit, err := ioutil.ReadFile(limitInBytesPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't read memory.limit_in_bytes\n")
+			os.Exit(1)
+		}
+
+		fmt.Printf("%s\n", string(limit))
+	}
+
 	os.Exit(globalFlags.ExitCode)
+}
+
+func getOwnCgroupPath(controller string) (string, error) {
+	selfCgroupPath := "/proc/self/cgroup"
+	cg, err := os.Open(selfCgroupPath)
+	if err != nil {
+		return "", fmt.Errorf("error opening /proc/self/cgroup: %v", err)
+	}
+	defer cg.Close()
+
+	s := bufio.NewScanner(cg)
+	for s.Scan() {
+		parts := strings.Split(s.Text(), ":")
+		if parts[1] == controller {
+			return parts[2], nil
+		}
+	}
+
+	return "", fmt.Errorf("controller not found")
 }
