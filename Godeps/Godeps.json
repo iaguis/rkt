@@ -17,7 +17,7 @@
 		},
 		{
 			"ImportPath": "github.com/ThomasRooney/gexpect",
-			"Rev": "3b60906367401d3dc2f9e5f3b5395184f8a2d75f"
+			"Rev": "aba9a53a74590e8bb446ed9a8ecdea8747a421cf"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",
@@ -111,12 +111,12 @@
 			"Rev": "6fe83ccda8fb9b7549c9ab4ba47f47858bc950aa"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-systemd/unit",
+			"ImportPath": "github.com/coreos/go-systemd/dbus",
 			"Comment": "v2-55-gd7b0894",
 			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-systemd/dbus",
+			"ImportPath": "github.com/coreos/go-systemd/unit",
 			"Comment": "v2-55-gd7b0894",
 			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
 		},
