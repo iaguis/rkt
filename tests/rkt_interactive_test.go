@@ -94,7 +94,7 @@ func TestInteractive(t *testing.T) {
 		if tt.say != "" {
 			err = child.ExpectTimeout("Enter text:", time.Minute)
 			if err != nil {
-				t.Fatalf("Waited for the prompt but not found #%v: %v", i, err)
+				t.Fatalf("Waited for the prompt but not found #%v: %v\n\nrkt output:\n%s", i, err, string(child.Collect()))
 			}
 
 			err = child.SendLine(tt.say)
@@ -105,7 +105,7 @@ func TestInteractive(t *testing.T) {
 
 		err = child.ExpectTimeout(tt.expect, time.Minute)
 		if err != nil {
-			t.Fatalf("Expected %q but not found #%v: %v", tt.expect, i, err)
+			t.Fatalf("Expected %q but not found #%v: %v\n\nrkt output:\n%s", tt.expect, i, err, string(child.Collect()))
 		}
 
 		err = child.Wait()

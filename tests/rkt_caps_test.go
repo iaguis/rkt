@@ -101,6 +101,8 @@ func TestCaps(t *testing.T) {
 				t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 			}
 
+			child.Capture()
+
 			expectedLine := tt.capa.String()
 			if (stage == 1 && tt.capInStage1Expected) || (stage == 2 && tt.capInStage2Expected) {
 				expectedLine += "=enabled"
@@ -109,12 +111,12 @@ func TestCaps(t *testing.T) {
 			}
 			err = child.Expect(expectedLine)
 			if err != nil {
-				t.Fatalf("Expected %q but not found: %v", expectedLine, err)
+				t.Fatalf("Expected %q but not found: %v\n\nrkt output:\n%s", expectedLine, err, string(child.Collect()))
 			}
 
 			err = child.Expect("User: uid=0 euid=0 gid=0 egid=0")
 			if err != nil {
-				t.Fatalf("Expected user 0 but not found: %v", err)
+				t.Fatalf("Expected user 0 but not found: %v\n\nrkt output:\n%s", err, string(child.Collect()))
 			}
 
 			err = child.Wait()
@@ -149,6 +151,8 @@ func TestNonRootCaps(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
+		child.Capture()
+
 		expectedLine := tt.capa.String()
 		if tt.nonrootCapExpected {
 			expectedLine += "=enabled"
@@ -157,12 +161,12 @@ func TestNonRootCaps(t *testing.T) {
 		}
 		err = child.Expect(expectedLine)
 		if err != nil {
-			t.Fatalf("Expected %q but not found: %v", expectedLine, err)
+			t.Fatalf("Expected %q but not found: %v\n\nrkt output:\n%s", expectedLine, err, string(child.Collect()))
 		}
 
 		err = child.Expect("User: uid=9000 euid=9000 gid=9000 egid=9000")
 		if err != nil {
-			t.Fatalf("Expected user 9000 but not found: %v", err)
+			t.Fatalf("Expected user 9000 but not found: %v\n\nrkt output:\n%s", err, string(child.Collect()))
 		}
 
 		err = child.Wait()

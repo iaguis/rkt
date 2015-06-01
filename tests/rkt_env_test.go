@@ -85,9 +85,11 @@ func TestEnv(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
+		child.Capture()
+
 		err = child.Expect(tt.runExpect)
 		if err != nil {
-			t.Fatalf("Expected %q but not found: %v", tt.runExpect, err)
+			t.Fatalf("Expected %q but not found: %v\n\nrkt output:\n%s", tt.runExpect, err, string(child.Collect()))
 		}
 
 		err = child.Wait()
@@ -105,7 +107,7 @@ func TestEnv(t *testing.T) {
 
 		err = child.Expect("Enter text:")
 		if err != nil {
-			t.Fatalf("Waited for the prompt but not found #%v: %v", i, err)
+			t.Fatalf("Waited for the prompt but not found #%v: %v\n\nrkt output:\n%s", i, err, string(child.Collect()))
 		}
 
 		enterCmd := strings.Replace(tt.enterCmd, "^RKT_BIN^", ctx.cmd(), -1)
@@ -117,7 +119,7 @@ func TestEnv(t *testing.T) {
 
 		err = enterChild.Expect(tt.runExpect)
 		if err != nil {
-			t.Fatalf("Expected %q but not found: %v", tt.runExpect, err)
+			t.Fatalf("Expected %q but not found: %v\n\nrkt output:\n%s", tt.runExpect, err, string(child.Collect()))
 		}
 
 		err = enterChild.Wait()
@@ -130,7 +132,7 @@ func TestEnv(t *testing.T) {
 		}
 		err = child.Expect("Received text: Bye")
 		if err != nil {
-			t.Fatalf("Expected Bye but not found #%v: %v", i, err)
+			t.Fatalf("Expected Bye but not found: %v\n\nrkt output:\n%s", err, string(child.Collect()))
 		}
 
 		err = child.Wait()

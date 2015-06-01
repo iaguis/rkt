@@ -107,9 +107,11 @@ func TestCatManifest(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
+		child.Capture()
+
 		if tt.expect != "" {
 			if err := child.Expect(tt.expect); err != nil {
-				t.Fatalf("Expected %q but not found: %v", tt.expect, err)
+				t.Fatalf("Expected %q but not found: %v\n\nrkt output:\n%s", tt.expect, err, string(child.Collect()))
 			}
 		}
 		if err := child.Wait(); err != nil {

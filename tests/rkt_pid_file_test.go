@@ -41,9 +41,11 @@ func TestPidFileRace(t *testing.T) {
 		t.Fatalf("Cannot exec rkt")
 	}
 
+	child.Capture()
+
 	err = child.Expect("Enter text:")
 	if err != nil {
-		t.Fatalf("Waited for the prompt but not found: %v", err)
+		t.Fatalf("Waited for the prompt but not found: %v\n\nrkt output:\n%s", err, string(child.Collect()))
 	}
 
 	// Check the pid file is really created
@@ -83,7 +85,7 @@ func TestPidFileRace(t *testing.T) {
 	// Now the "enter" command works and can complete
 	err = enterChild.Expect("RktEnterWorksFine")
 	if err != nil {
-		t.Fatalf("Waited for enter to works but failed: %v", err)
+		t.Fatalf("Waited for enter to work but failed: %v\n\nrkt output:\n%s", err, string(child.Collect()))
 	}
 	err = enterChild.Wait()
 	if err != nil {
@@ -97,7 +99,7 @@ func TestPidFileRace(t *testing.T) {
 	}
 	err = child.Expect("Received text: Bye")
 	if err != nil {
-		t.Fatalf("Expected Bye but not found: %v", err)
+		t.Fatalf("Expected Bye but not found: %v\n\nrkt output:\n%s", err, string(child.Collect()))
 	}
 	err = child.Wait()
 	if err != nil {

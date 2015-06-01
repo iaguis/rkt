@@ -175,8 +175,9 @@ func expectedRunRkt(ctx *rktRunCtx, t *testing.T, host, dir, line string) {
 		t.Fatalf("Failed to run rkt: %v", err)
 	}
 	defer child.Wait()
+	child.Capture()
 	if err := child.Expect(line); err != nil {
-		t.Fatalf("Didn't receive expected output %q: %v", line, err)
+		t.Fatalf("Didn't receive expected output %q: %v\n\nrkt output:\n%s", line, err, string(child.Collect()))
 	}
 }
 
