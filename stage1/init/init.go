@@ -491,7 +491,7 @@ func createCgroups(root string, machineID string, appHashes []types.Hash) error 
 	for ln, tgt := range symlinks {
 		lnPath := filepath.Join(cgroupTmpfs, ln)
 		if err := os.Symlink(tgt, lnPath); err != nil {
-			return fmt.Errorf("Error creating symlink: %v", err)
+			return fmt.Errorf("error creating symlink: %v", err)
 		}
 	}
 
