@@ -17,6 +17,7 @@
 package common
 
 // adapted from systemd/src/shared/cgroup-util.c
+// TODO this should be moved to go-systemd
 
 import (
 	"fmt"
@@ -42,13 +43,18 @@ var (
 func cgEscape(p string) string {
 	needPrefix := false
 
-	if strings.HasPrefix(p, "_") ||
-		strings.HasPrefix(p, ".") ||
-		p == "notify_on_release" ||
-		p == "release_agent" ||
-		p == "tasks" {
-		needPrefix = true
-	} else {
+	switch {
+	case strings.HasPrefix(p, "_"):
+		fallthrough
+	case strings.HasPrefix(p, "."):
+		fallthrough
+	case p == "notify_on_release":
+		fallthrough
+	case p == "release_agent":
+		fallthrough
+	case p == "tasks":
+		fallthrough
+	default:
 		if strings.Contains(p, ".") {
 			sp := strings.Split(p, ".")
 			if sp[0] == "cgroup" {
