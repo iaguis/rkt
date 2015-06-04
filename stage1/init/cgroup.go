@@ -21,16 +21,67 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/common"
 )
 
-var cgroupControllerRWFiles = map[string][]string{
-	"memory": []string{"memory.limit_in_bytes"},
-	"cpu":    []string{"cpu.cfs_quota_us"},
+type addIsolatorFunc func(opts []*unit.UnitOption, limit string) []*unit.UnitOption
+
+var (
+	isolatorFuncs = map[string]addIsolatorFunc{
+		"cpu":    addCpuLimit,
+		"memory": addMemoryLimit,
+	}
+	cgroupControllerRWFiles = map[string][]string{
+		"memory": []string{"memory.limit_in_bytes"},
+		"cpu":    []string{"cpu.cfs_quota_us"},
+	}
+)
+
+func addCpuLimit(opts []*unit.UnitOption, limit string) []*unit.UnitOption {
+	milliCores, err := strconv.Atoi(limit)
+	if err != nil {
+		return opts
+	}
+	quota := strconv.Itoa(milliCores/10) + "%"
+	opts = append(opts, newUnitOption("Service", "CPUQuota", quota))
+	return opts
+}
+
+func addMemoryLimit(opts []*unit.UnitOption, limit string) []*unit.UnitOption {
+	opts = append(opts, newUnitOption("Service", "MemoryLimit", limit))
+	return opts
+}
+
+func maybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) []*unit.UnitOption {
+	if isIsolatorSupported(isolator) {
+		opts = isolatorFuncs[isolator](opts, limit)
+	} else {
+		fmt.Fprintf(os.Stderr, "warning: resource/%s isolator set but support disabled in the kernel, skipping\n", isolator)
+	}
+	return opts
+}
+
+func isIsolatorSupported(isolator string) bool {
+	if files, ok := cgroupControllerRWFiles[isolator]; ok {
+		fmt.Println(isolator, "exists")
+		for _, f := range files {
+			isolatorPath := filepath.Join("/sys/fs/cgroup/", isolator, f)
+			fmt.Println(isolatorPath)
+			if _, err := os.Stat(isolatorPath); os.IsNotExist(err) {
+				fmt.Println("doesn't exist")
+				return false
+			}
+		}
+		fmt.Println(isolator, "supported")
+		return true
+	}
+	return false
 }
 
 func parseCgroups() (map[int][]string, error) {
