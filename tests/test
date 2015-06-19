@@ -36,4 +36,4 @@ if [ $HOST_SYSTEMD_VERSION -lt 220 -a $STAGE1_SRC_FROM_HOST -eq 1 ] ; then
 	exit 0
 fi
 
-sudo GOPATH="${PWD}/../gopath" GOROOT="$GOROOT" $GO test -v $*
+sudo GOPATH="${PWD}/../gopath" GOROOT="$GOROOT" $GO test -v -timeout=1200s $*
