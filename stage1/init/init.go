@@ -501,6 +501,24 @@ func stage1() int {
 		return 3
 	}
 
+	// create a separate mount namespace so the cgroup filesystems
+	// are unmounted when exiting the pod
+	if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
+		log.Fatalf("error unsharing: %v", err)
+	}
+
+	// we recursively make / a "shared and slave" so mount events from the
+	// new namespace don't propagate to the host namespace but mount events
+	// from the host propagate to the new namespace and are forwarded to
+	// its peer group
+	// See https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SLAVE, ""); err != nil {
+		log.Fatalf("error making / a slave mount: %v", err)
+	}
+	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SHARED, ""); err != nil {
+		log.Fatalf("error making / a shared and slave mount: %v", err)
+	}
+
 	appHashes := p.GetAppHashes()
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := p.GetMachineID()
