@@ -20,5 +20,5 @@ import (
 )
 
 func TestSleep(t *testing.T) {
-	time.Sleep(300 * time.Second)
+	time.Sleep(400 * time.Second)
 }
