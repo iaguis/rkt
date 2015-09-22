@@ -31,7 +31,7 @@ import (
 const (
 	rktGroup      = "rkt"
 	groupFilePath = "/etc/group"
-	casDbPerm     = os.FileMode(0664)
+	casDbPerm     = os.FileMode(0660)
 )
 
 var (
@@ -43,18 +43,31 @@ var (
 
 	// dirs relative to globalFlags.Dir
 	dirs = map[string]os.FileMode{
-		".":                        os.FileMode(0755),
-		"tmp":                      os.FileMode(0775),
-		"pods":                     os.FileMode(0700),
-		"cas":                      os.FileMode(0775),
-		"cas/db":                   os.FileMode(0775),
-		"cas/imagelocks":           os.FileMode(0775),
-		"cas/blob":                 os.FileMode(0775),
-		"cas/blob/sha512":          os.FileMode(0775),
-		"cas/treestorelocks":       os.FileMode(0775),
-		"cas/tree":                 os.FileMode(0775),
-		"cas/imageManifest":        os.FileMode(0775),
-		"cas/imageManifest/sha512": os.FileMode(0775),
+		".":    os.FileMode(0750 | os.ModeSetgid),
+		"tmp":  os.FileMode(0750 | os.ModeSetgid),
+		"pods": os.FileMode(0750 | os.ModeSetgid),
+		"cas":  os.FileMode(0750 | os.ModeSetgid),
+
+		// Make sure 'rkt' group can access the 'db' directory so that
+		// they can do database transactions.
+		// Maybe we can seperate the read-only database access from
+		// read-write database access so that we can set the directory
+		// read-only to 'rkt' group.
+		"cas/db":                   os.FileMode(0770 | os.ModeSetgid),
+		"cas/imagelocks":           os.FileMode(0750 | os.ModeSetgid),
+		"cas/imageManifest":        os.FileMode(0750 | os.ModeSetgid),
+		"cas/imageManifest/sha512": os.FileMode(0750 | os.ModeSetgid),
+		"cas/blob":                 os.FileMode(0750 | os.ModeSetgid),
+		"cas/blob/sha512":          os.FileMode(0750 | os.ModeSetgid),
+		"cas/tmp":                  os.FileMode(0750 | os.ModeSetgid),
+		"cas/tree":                 os.FileMode(0750 | os.ModeSetgid),
+		"cas/treestorelocks":       os.FileMode(0750 | os.ModeSetgid),
+		"pods/embryo":              os.FileMode(0750 | os.ModeSetgid),
+		"pods/prepare":             os.FileMode(0750 | os.ModeSetgid),
+		"pods/prepared":            os.FileMode(0750 | os.ModeSetgid),
+		"pods/run":                 os.FileMode(0750 | os.ModeSetgid),
+		"pods/exited-garbage":      os.FileMode(0750 | os.ModeSetgid),
+		"pods/garbage":             os.FileMode(0750 | os.ModeSetgid),
 	}
 )
 
@@ -185,27 +198,6 @@ func createDirStructure(gid int) error {
 	return nil
 }
 
-func setCasDirPermissions(casPath string, gid int, perm os.FileMode) error {
-	casWalker := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.Mode().IsDir() {
-			if err := setPermissions(path, 0, gid, perm); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	if err := filepath.Walk(casPath, casWalker); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func setCasDbFilesPermissions(casDbPath string, gid int, perm os.FileMode) error {
 	casDbWalker := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -258,14 +250,7 @@ func runInstall(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	casDirPerm := dirs["cas"]
-	casPath := filepath.Join(globalFlags.Dir, "cas")
-	if err := setCasDirPermissions(casPath, gid, casDirPerm); err != nil {
-		stderr("install: error setting cas permissions: %v", err)
-		return 1
-	}
-
-	casDbPath := filepath.Join(casPath, "db")
+	casDbPath := filepath.Join(globalFlags.Dir, "cas", "db")
 	if err := setCasDbFilesPermissions(casDbPath, gid, casDbPerm); err != nil {
 		stderr("install: error setting cas db permissions: %v", err)
 		return 1
