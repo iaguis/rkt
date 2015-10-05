@@ -54,8 +54,8 @@ typedef struct _mount_point_t {
 int main(int argc, char *argv[])
 {
 	static const char *unlink_paths[] = {
-		"dev/shm",
 		"dev/ptmx",
+		"dev/shm",
 		NULL
 	};
 	static const dir_op_t dirs[] = {
@@ -68,21 +68,21 @@ int main(int argc, char *argv[])
 		dir("dev/pts",	0755),
 	};
 	static const char *devnodes[] = {
-		"/dev/null",
-		"/dev/zero",
-		"/dev/full",
-		"/dev/random",
-		"/dev/urandom",
-		"/dev/tty",
-		"/dev/net/tun",
 		"/dev/console",
+		"/dev/full",
+		"/dev/net/tun",
+		"/dev/null",
+		"/dev/random",
+		"/dev/tty",
+		"/dev/urandom",
+		"/dev/zero",
 		NULL
 	};
 	static const mount_point mount_table[] = {
+		{ "/dev/pts", "/dev/pts", "bind", NULL, MS_BIND },
+		{ "/dev/shm", "/dev/shm", "bind", NULL, MS_BIND },
 		{ "/proc", "/proc", "bind", NULL, MS_BIND|MS_REC },
 		{ "/sys", "/sys", "bind", NULL, MS_BIND|MS_REC },
-		{ "/dev/shm", "/dev/shm", "bind", NULL, MS_BIND },
-		{ "/dev/pts", "/dev/pts", "bind", NULL, MS_BIND },
 	};
 	const char *root;
 	int rootfd;
