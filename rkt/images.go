@@ -721,7 +721,12 @@ func newDiscoveryApp(img string) *discovery.App {
 }
 
 func discoverApp(app *discovery.App, insecure bool) (*discovery.Endpoints, error) {
-	ep, attempts, err := discovery.DiscoverEndpoints(*app, insecure)
+	config, err := getConfig()
+	if err != nil {
+		return nil, err
+	}
+	perHostHeader := resolveHeaderer(config.AuthPerHost)
+	ep, attempts, err := discovery.DiscoverEndpoints(*app, perHostHeader, insecure)
 	if globalFlags.Debug {
 		for _, a := range attempts {
 			stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)

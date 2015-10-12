@@ -24,6 +24,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/coreos/rkt/rkt/config"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
@@ -46,14 +48,26 @@ func getPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, er
 	return kls, nil
 }
 
+func resolveHeaderer(headerer map[string]config.Headerer) map[string]http.Header {
+	perHostHeader := make(map[string]http.Header)
+	for k, v := range headerer {
+		perHostHeader[k] = v.Header()
+	}
+	return perHostHeader
+}
+
 // metaDiscoverPubKeyLocations discovers the public key through ACDiscovery by applying prefix as an ACApp
 func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
 	app, err := discovery.NewAppFromString(prefix)
 	if err != nil {
 		return nil, err
 	}
-
-	ep, attempts, err := discovery.DiscoverPublicKeys(*app, allowHTTP)
+	config, err := getConfig()
+	if err != nil {
+		return nil, err
+	}
+	perHostHeader := resolveHeaderer(config.AuthPerHost)
+	ep, attempts, err := discovery.DiscoverPublicKeys(*app, perHostHeader, allowHTTP)
 	if err != nil {
 		return nil, err
 	}
