@@ -684,6 +684,33 @@ func areHostCgroupsMounted(enabledCgroups map[int][]string) bool {
 	return true
 }
 
+func mountSys(root string) error {
+	var (
+		fsType string
+		flags  uintptr
+	)
+
+	sys := filepath.Join(root, "/sys")
+	if err := os.MkdirAll(sys, 0700); err != nil {
+		return err
+	}
+	if root == "/" {
+		fsType = "sysfs"
+	} else {
+		fsType = "tmpfs"
+	}
+	flags = syscall.MS_NOSUID |
+		syscall.MS_NOEXEC |
+		syscall.MS_NODEV
+	// If we're mounting the host cgroups, /sys is probably mounted so we
+	// ignore EBUSY
+	if err := syscall.Mount(fsType, sys, fsType, flags, ""); err != nil && err != syscall.EBUSY {
+		return fmt.Errorf("error mounting %q: %v", sys, err)
+	}
+
+	return nil
+}
+
 // mountHostCgroups mounts the host cgroup hierarchy as required by
 // systemd-nspawn. We need this because some distributions don't have the
 // "name=systemd" cgroup or don't mount the cgroup controllers in
@@ -692,6 +719,9 @@ func areHostCgroupsMounted(enabledCgroups map[int][]string) bool {
 func mountHostCgroups(enabledCgroups map[int][]string) error {
 	systemdControllerPath := "/sys/fs/cgroup/systemd"
 	if !areHostCgroupsMounted(enabledCgroups) {
+		if err := mountSys("/"); err != nil {
+			return err
+		}
 		if err := cgroup.CreateCgroups("/", enabledCgroups); err != nil {
 			return fmt.Errorf("error creating host cgroups: %v\n", err)
 		}
@@ -713,6 +743,9 @@ func mountHostCgroups(enabledCgroups map[int][]string) error {
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
 func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+	if err := mountSys(s1Root); err != nil {
+		return err
+	}
 	if err := cgroup.CreateCgroups(s1Root, enabledCgroups); err != nil {
 		return fmt.Errorf("error creating container cgroups: %v\n", err)
 	}

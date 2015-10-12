@@ -277,19 +277,6 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 	controllers := GetControllerDirs(enabledCgroups)
 	var flags uintptr
 
-	sys := filepath.Join(root, "/sys")
-	if err := os.MkdirAll(sys, 0700); err != nil {
-		return err
-	}
-	flags = syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV
-	// If we're mounting the host cgroups, /sys is probably mounted so we
-	// ignore EBUSY
-	if err := syscall.Mount("sysfs", sys, "sysfs", flags, ""); err != nil && err != syscall.EBUSY {
-		return fmt.Errorf("error mounting %q: %v", sys, err)
-	}
-
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
 	if err := os.MkdirAll(cgroupTmpfs, 0700); err != nil {
 		return err
@@ -351,7 +338,6 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
 	controllers := GetControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
-	sysPath := filepath.Join(root, "/sys")
 
 	var flags uintptr
 
@@ -395,17 +381,6 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 		if err := syscall.Mount(cPath, cPath, "", flags, ""); err != nil {
 			return fmt.Errorf("error remounting RO %q: %v", cPath, err)
 		}
-	}
-
-	// Bind-mount sys filesystem read-only
-	flags = syscall.MS_BIND |
-		syscall.MS_REMOUNT |
-		syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
-		syscall.MS_RDONLY
-	if err := syscall.Mount(sysPath, sysPath, "", flags, ""); err != nil {
-		return fmt.Errorf("error remounting RO %q: %v", sysPath, err)
 	}
 
 	return nil
