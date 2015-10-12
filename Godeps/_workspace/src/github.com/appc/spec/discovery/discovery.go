@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -123,13 +124,13 @@ func createTemplateVars(app App) []string {
 	return tplVars
 }
 
-func doDiscover(pre string, app App, insecure bool) (*Endpoints, error) {
+func doDiscover(pre string, perHostHeader map[string]http.Header, app App, insecure bool) (*Endpoints, error) {
 	app = *app.Copy()
 	if app.Labels["version"] == "" {
 		app.Labels["version"] = defaultVersion
 	}
 
-	_, body, err := httpsOrHTTP(pre, insecure)
+	_, body, err := httpsOrHTTP(pre, perHostHeader, insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +172,7 @@ func doDiscover(pre string, app App, insecure bool) (*Endpoints, error) {
 // DiscoverWalk will make HTTPS requests to find discovery meta tags and
 // optionally will use HTTP if insecure is set. Based on the response of the
 // discoverFn it will continue to recurse up the tree.
-func DiscoverWalk(app App, insecure bool, discoverFn DiscoverWalkFunc) (err error) {
+func DiscoverWalk(app App, perHostHeader map[string]http.Header, insecure bool, discoverFn DiscoverWalkFunc) (err error) {
 	var (
 		eps *Endpoints
 	)
@@ -181,7 +182,7 @@ func DiscoverWalk(app App, insecure bool, discoverFn DiscoverWalkFunc) (err erro
 		end := len(parts) - i
 		pre := strings.Join(parts[:end], "/")
 
-		eps, err = doDiscover(pre, app, insecure)
+		eps, err = doDiscover(pre, perHostHeader, app, insecure)
 		if derr := discoverFn(pre, eps, err); derr != nil {
 			return derr
 		}
@@ -217,7 +218,7 @@ func walker(out *Endpoints, attempts *[]FailedAttempt, testFn DiscoverWalkFunc) 
 // DiscoverEndpoints will make HTTPS requests to find the ac-discovery meta
 // tags and optionally will use HTTP if insecure is set. It will not give up
 // until it has exhausted the path or found an image discovery.
-func DiscoverEndpoints(app App, insecure bool) (out *Endpoints, attempts []FailedAttempt, err error) {
+func DiscoverEndpoints(app App, perHostHeader map[string]http.Header, insecure bool) (out *Endpoints, attempts []FailedAttempt, err error) {
 	out = &Endpoints{}
 	testFn := func(pre string, eps *Endpoints, err error) error {
 		if len(out.ACIEndpoints) != 0 {
@@ -226,7 +227,7 @@ func DiscoverEndpoints(app App, insecure bool) (out *Endpoints, attempts []Faile
 		return nil
 	}
 
-	err = DiscoverWalk(app, insecure, walker(out, &attempts, testFn))
+	err = DiscoverWalk(app, perHostHeader, insecure, walker(out, &attempts, testFn))
 	if err != nil && err != errEnough {
 		return nil, attempts, err
 	}
@@ -237,7 +238,7 @@ func DiscoverEndpoints(app App, insecure bool) (out *Endpoints, attempts []Faile
 // DiscoverPublicKey will make HTTPS requests to find the ac-public-keys meta
 // tags and optionally will use HTTP if insecure is set. It will not give up
 // until it has exhausted the path or found an public key.
-func DiscoverPublicKeys(app App, insecure bool) (out *Endpoints, attempts []FailedAttempt, err error) {
+func DiscoverPublicKeys(app App, perHostHeader map[string]http.Header, insecure bool) (out *Endpoints, attempts []FailedAttempt, err error) {
 	out = &Endpoints{}
 	testFn := func(pre string, eps *Endpoints, err error) error {
 		if len(out.Keys) != 0 {
@@ -246,7 +247,7 @@ func DiscoverPublicKeys(app App, insecure bool) (out *Endpoints, attempts []Fail
 		return nil
 	}
 
-	err = DiscoverWalk(app, insecure, walker(out, &attempts, testFn))
+	err = DiscoverWalk(app, perHostHeader, insecure, walker(out, &attempts, testFn))
 	if err != nil && err != errEnough {
 		return nil, attempts, err
 	}

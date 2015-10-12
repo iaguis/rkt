@@ -55,15 +55,23 @@ func init() {
 	httpGet = Client
 }
 
-func httpsOrHTTP(name string, insecure bool) (urlStr string, body io.ReadCloser, err error) {
+func httpsOrHTTP(name string, perHostHeader map[string]http.Header, insecure bool) (urlStr string, body io.ReadCloser, err error) {
 	fetch := func(scheme string) (urlStr string, res *http.Response, err error) {
 		u, err := url.Parse(scheme + "://" + name)
 		if err != nil {
 			return "", nil, err
 		}
 		u.RawQuery = "ac-discovery=1"
+		client := &http.Client{}
 		urlStr = u.String()
-		res, err = httpGet.Get(urlStr)
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return "", nil, err
+		}
+		if hostHeader, ok := perHostHeader[u.Host]; ok {
+			req.Header = hostHeader
+		}
+		res, err = client.Do(req)
 		return
 	}
 	closeBody := func(res *http.Response) {
