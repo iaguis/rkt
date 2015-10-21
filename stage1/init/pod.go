@@ -111,6 +111,7 @@ func simpleEscape(str string) string {
 	esc := strings.Replace(str, `\`, `\\`, -1)
 	esc = strings.Replace(esc, `"`, `\"`, -1)
 	esc = strings.Replace(esc, `'`, `\'`, -1)
+	esc = strings.Replace(esc, "\n", "\\n", -1)
 
 	return esc
 }
@@ -294,7 +295,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 	} else {
 		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
-		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
+		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", simpleEscape(filepath.Base(app.Exec[0]))))
 	}
 
 	// When an app fails, we shut down the pod
