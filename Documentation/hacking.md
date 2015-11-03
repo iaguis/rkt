@@ -55,6 +55,10 @@ Additionally, the following features are nice to have:
 
 * `CONFIG_OVERLAY_FS` (to prepare the rootfs without tar)
 
+rkt needs the following bug fixes in Linux:
+* [ovl: fix open in stacked overlay](https://github.com/torvalds/linux/commit/1c8a47df36d72ace8cf78eb6c228aa0f8027d3c2) (fix merged in Linux 4.3)
+* [cpuset: use trialcs->mems_allowed as a temp variable](https://github.com/torvalds/linux/commit/24ee3cf89bef04e8bc23788aca4e029a3f0f06d9) (fix merged in Linux 4.2)
+
 ### With Docker
 
 Alternatively, you can build rkt in a Docker container with the following command.
