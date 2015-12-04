@@ -755,7 +755,7 @@ func (p *pod) getState() string {
 }
 
 func (p *pod) getModTime(path string) (time.Time, error) {
-	f, err := p.openFile(path, syscall.O_RDONLY|syscall.O_DIRECTORY)
+	f, err := p.openFile(path, syscall.O_RDONLY)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -780,7 +780,9 @@ func (p *pod) getRootModTime() (time.Time, error) {
 // getExitTime returns the exit time of the pod
 func (p *pod) getExitTime() (time.Time, error) {
 	if p.afterRun() {
-		return p.getModTime("stage1")
+		if et, err := p.getModTime("exited"); err == nil {
+			return et, nil
+		}
 	}
 	return time.Time{}, nil
 }

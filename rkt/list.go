@@ -106,14 +106,18 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 		var whenStr string
 		if flagFullOutput {
-			if !exited.IsZero() {
-				whenStr = exited.Format(defaultTimeLayout)
+			if p.isExited || p.isExitedGarbage {
+				if !exited.IsZero() {
+					whenStr = exited.Format(defaultTimeLayout)
+				}
 			} else if !created.IsZero() {
 				whenStr = created.Format(defaultTimeLayout)
 			}
 		} else {
-			if !exited.IsZero() {
-				whenStr = humanize.Time(exited)
+			if p.isExited || p.isExitedGarbage {
+				if !exited.IsZero() {
+					whenStr = humanize.Time(exited)
+				}
 			} else if !created.IsZero() {
 				whenStr = humanize.Time(created)
 			}

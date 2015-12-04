@@ -84,8 +84,10 @@ func printStatus(p *pod) error {
 	}
 
 	var since string
-	if !exited.IsZero() {
-		since = exited.Format(defaultTimeLayout)
+	if p.isExited || p.isExitedGarbage {
+		if !exited.IsZero() {
+			since = exited.Format(defaultTimeLayout)
+		}
 	} else if !created.IsZero() {
 		since = created.Format(defaultTimeLayout)
 	}
