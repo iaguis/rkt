@@ -15,6 +15,7 @@
 package store
 
 import (
+	"bufio"
 	"crypto/sha512"
 	"database/sql"
 	"encoding/json"
@@ -23,6 +24,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -112,6 +114,46 @@ type Store struct {
 	treeStoreLockDir string
 }
 
+func (s *Store) UpdateSize(key string, newSize int64) error {
+	return s.db.Do(func(tx *sql.Tx) error {
+		_, err = tx.Exec("UPDATE aciinfo SET size = $1 WHERE blobkey == $2", newSize, key)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (s *Store) populateSize() error {
+	var ais []*ACIInfo
+	err := s.db.Do(func(tx *sql.Tx) error {
+		var err error
+		ais, err = GetACIInfosWithKeyPrefix(tx, "")
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("error retrieving ACI Infos: %v", err)
+	}
+
+	sizes := make(map[string]uint64)
+	for _, ai := range ais {
+		im, err := s.ReadStream(ai.BlobKey)
+		if err != nil {
+			return err
+		}
+		bim := bufio.NewReader(im)
+		rd, _ := bim.Discard(math.MaxInt32)
+
+		sizes[ai.BlobKey] = uint64(rd)
+	}
+
+	for k, sz := range sizes {
+		s.UpdateSize(k, sz)
+	}
+
+	return nil
+}
+
 func NewStore(baseDir string) (*Store, error) {
 	// We need to allow the store's setgid bits (if any) to propagate, so
 	// disable umask
@@ -160,6 +202,7 @@ func NewStore(baseDir string) (*Store, error) {
 	s.treestore = &TreeStore{path: filepath.Join(storeDir, "tree")}
 
 	needsMigrate := false
+	needsSizePopulation := false
 	fn := func(tx *sql.Tx) error {
 		var err error
 		ok, err := dbIsPopulated(tx)
@@ -187,6 +230,9 @@ func NewStore(baseDir string) (*Store, error) {
 		if version > dbVersion {
 			return fmt.Errorf("Current store db version: %d greater than the current rkt expected version: %d", version, dbVersion)
 		}
+		if version < 5 {
+			needsSizePopulation = true
+		}
 		return nil
 	}
 	if err = db.Do(fn); err != nil {
@@ -212,6 +258,16 @@ func NewStore(baseDir string) (*Store, error) {
 		}
 		if err = db.Do(fn); err != nil {
 			return nil, err
+		}
+
+		if err := s.storeLock.Close(); err != nil {
+			return nil, err
+		}
+
+		if needsSizePopulation {
+			if err := s.populateSize(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -327,7 +383,7 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 		return WriteACIInfo(tx, aciinfo)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot remove image with ID: %s from db: %v", key, err)
+		return nil, fmt.Errorf("cannot get image info for %q from db: %v", key, err)
 	}
 
 	return s.stores[blobType].ReadStream(key, false)
@@ -358,7 +414,8 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error creating image: %v", err)
 	}
-	if _, err := io.Copy(fh, tr); err != nil {
+	sz, err := io.Copy(fh, tr)
+	if err != nil {
 		return "", fmt.Errorf("error copying image: %v", err)
 	}
 	im, err := aci.ManifestFromImage(fh)
@@ -398,6 +455,7 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 			ImportTime: time.Now(),
 			LastUsed:   time.Now(),
 			Latest:     latest,
+			Size:       sz,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
