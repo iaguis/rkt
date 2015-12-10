@@ -116,11 +116,15 @@ type Store struct {
 
 func (s *Store) UpdateSize(key string, newSize int64) error {
 	return s.db.Do(func(tx *sql.Tx) error {
-		_, err = tx.Exec("UPDATE aciinfo SET size = $1 WHERE blobkey == $2", newSize, key)
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err := tx.Exec("UPDATE aciinfo SET size = $1 WHERE blobkey == $2", newSize, key)
+		return err
+	})
+}
+
+func (s *Store) UpdateTreeStoreSize(key string, newSize int64) error {
+	return s.db.Do(func(tx *sql.Tx) error {
+		_, err := tx.Exec("UPDATE aciinfo SET treestoresize = $1 WHERE blobkey == $2", newSize, key)
+		return err
 	})
 }
 
@@ -132,23 +136,38 @@ func (s *Store) populateSize() error {
 		return err
 	})
 	if err != nil {
-		return fmt.Errorf("error retrieving ACI Infos: %v", err)
+		return fmt.Errorf("populateSize(): error retrieving ACI Infos: %v", err)
 	}
 
-	sizes := make(map[string]uint64)
+	aciSizes := make(map[string]int64)
+	tsSizes := make(map[string]int64)
 	for _, ai := range ais {
-		im, err := s.ReadStream(ai.BlobKey)
+		key := ai.BlobKey
+
+		im, err := s.ReadStream(key)
 		if err != nil {
 			return err
 		}
 		bim := bufio.NewReader(im)
 		rd, _ := bim.Discard(math.MaxInt32)
 
-		sizes[ai.BlobKey] = uint64(rd)
+		aciSizes[key] = int64(rd)
+
+		id, err := s.GetTreeStoreID(key)
+		if err != nil {
+			return err
+		}
+		tsSize, err := s.treestore.Size(id)
+		if err != nil {
+			return err
+		}
+
+		tsSizes[key] = tsSize
 	}
 
-	for k, sz := range sizes {
-		s.UpdateSize(k, sz)
+	for k, _ := range aciSizes {
+		s.UpdateSize(k, aciSizes[k])
+		s.UpdateTreeStoreSize(k, tsSizes[k])
 	}
 
 	return nil
@@ -598,6 +617,16 @@ func (s *Store) RenderTreeStore(key string, rebuild bool) (id string, hash strin
 	if hash, err = s.treestore.Write(id, key, s); err != nil {
 		return "", "", err
 	}
+
+	treeSize, err := s.treestore.Size(id)
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := s.UpdateTreeStoreSize(key, treeSize); err != nil {
+		return "", "", err
+	}
+
 	return id, hash, nil
 }
 

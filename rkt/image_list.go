@@ -218,10 +218,11 @@ func runImages(cmd *cobra.Command, args []string) int {
 					fieldValue = humanize.Time(aciInfo.LastUsed)
 				}
 			case l(size):
+				totalSize := aciInfo.Size + aciInfo.TreeStoreSize
 				if flagFullOutput {
-					fieldValue = fmt.Sprintf("%d", aciInfo.Size)
+					fieldValue = fmt.Sprintf("%d", totalSize)
 				} else {
-					fieldValue = humanize.IBytes(uint64(aciInfo.Size))
+					fieldValue = humanize.IBytes(uint64(totalSize))
 				}
 			case l(latest):
 				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)

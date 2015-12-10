@@ -30,6 +30,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/tarheader"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/uid"
 )
@@ -196,6 +197,10 @@ func (ts *TreeStore) Check(id string) (string, error) {
 		return "", fmt.Errorf("treestore: wrong tree hash: %s, expected: %s", curhash, hash)
 	}
 	return curhash, nil
+}
+
+func (ts *TreeStore) Size(id string) (int64, error) {
+	return fileutil.DirSize(ts.GetPath(id))
 }
 
 type xattr struct {

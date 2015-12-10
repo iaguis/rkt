@@ -133,13 +133,13 @@ func migrateToV4(tx *sql.Tx) error {
 
 func migrateToV5(tx *sql.Tx) error {
 	for _, t := range []string{
-		"CREATE TABLE aciinfo_tmp (blobkey string, name string, importtime time, lastused time, latest bool, size int64);",
+		"CREATE TABLE aciinfo_tmp (blobkey string, name string, importtime time, lastused time, latest bool, size int64, treestoresize int64);",
 		"INSERT INTO aciinfo_tmp (blobkey, name, importtime, lastused, latest) SELECT blobkey, name, importtime, lastusedtime, latest from aciinfo",
 		"DROP TABLE aciinfo",
 		// We don't use now() as a DEFAULT for lastusedtime because it doesn't
 		// return a UTC time, which is what we want. Instead, we UPDATE it
 		// below.
-		"CREATE TABLE aciinfo (blobkey string, name string, importtime time, lastused time, latest bool, size int64);",
+		"CREATE TABLE aciinfo (blobkey string, name string, importtime time, lastused time, latest bool, size int64, treestoresize int64);",
 		"CREATE UNIQUE INDEX IF NOT EXISTS blobkeyidx ON aciinfo (blobkey)",
 		"CREATE INDEX IF NOT EXISTS nameidx ON aciinfo (name)",
 		"INSERT INTO aciinfo SELECT * from aciinfo_tmp",
@@ -152,6 +152,11 @@ func migrateToV5(tx *sql.Tx) error {
 	}
 
 	_, err := tx.Exec("UPDATE aciinfo size = 0")
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE aciinfo treestoresize = 0")
 	if err != nil {
 		return err
 	}
