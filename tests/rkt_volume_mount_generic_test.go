@@ -27,7 +27,10 @@ func TestVolumeMount(t *testing.T) {
 		volumeMountTestCasesNonRecursiveCLI,
 		volumeMountTestCasesRecursivePodManifest,
 		volumeMountTestCasesNonRecursivePodManifest,
-		volumeMountTestCasesNonRecursive,
+		// FIXME: non-recursive mounts are broken since systemd v238
+		// (https://github.com/systemd/systemd/issues/13170). Enable this when
+		// updating to v243.
+		// volumeMountTestCasesNonRecursive,
 		volumeMountTestCasesDuplicateVolume,
 		{
 			{

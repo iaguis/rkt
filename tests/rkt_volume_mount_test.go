@@ -143,22 +143,26 @@ var (
 	}
 
 	volumeMountTestCasesNonRecursiveCLI = []volumeMountTestCase{
-		{
-			"CLI: read file with non-recursive mount",
-			[]imagePatch{
-				{
-					"rkt-test-run-read-file.aci",
-					[]string{fmt.Sprintf("--exec=/inspect --read-file --file-name %s", mountFilePath)},
-				},
-			},
-			fmt.Sprintf(
-				"--volume=test,kind=host,source=%s,recursive=false --mount volume=test,target=%s",
-				volDir, mountDir,
-			),
-			nil,
-			outerFileContent,
-			false,
-		},
+		// FIXME: non-recursive mounts are broken since systemd v238
+		// (https://github.com/systemd/systemd/issues/13170). Enable this when
+		// updating to v243.
+		//
+		// {
+		// 	"CLI: read file with non-recursive mount",
+		// 	[]imagePatch{
+		// 		{
+		// 			"rkt-test-run-read-file.aci",
+		// 			[]string{fmt.Sprintf("--exec=/inspect --read-file --file-name %s", mountFilePath)},
+		// 		},
+		// 	},
+		// 	fmt.Sprintf(
+		// 		"--volume=test,kind=host,source=%s,recursive=false --mount volume=test,target=%s",
+		// 		volDir, mountDir,
+		// 	),
+		// 	nil,
+		// 	outerFileContent,
+		// 	false,
+		// },
 		{
 			"CLI: read-only non-recursive write file must fail",
 			[]imagePatch{
@@ -281,41 +285,44 @@ var (
 			false,
 		},
 	}
-
-	volumeMountTestCasesNonRecursive = []volumeMountTestCase{
-		{
-			"Read of nested file for non-recursive mount",
-			[]imagePatch{
-				{"rkt-test-run-pod-manifest-recursive-mount-stat.aci", []string{}},
-			},
-			"",
-			&schema.PodManifest{
-				Apps: []schema.RuntimeApp{
-					{
-						Name: baseAppName,
-						App: &types.App{
-							Exec:  []string{"/inspect", "--read-file"},
-							User:  "0",
-							Group: "0",
-							Environment: []types.EnvironmentVariable{
-								{"FILE", mountFilePath},
-							},
-							MountPoints: []types.MountPoint{
-								{mountName, mountDir, false},
-							},
-						},
-					},
-				},
-				Volumes: []types.Volume{
-					{Name: mountName, Kind: "host", Source: volDir,
-						ReadOnly: nil, Recursive: &boolFalse,
-						Mode: nil, UID: nil, GID: nil},
-				},
-			},
-			outerFileContent,
-			false,
-		},
-	}
+	// FIXME: non-recursive mounts are broken since systemd v238
+	// (https://github.com/systemd/systemd/issues/13170). Enable this when
+	// updating to v243.
+	//
+	// volumeMountTestCasesNonRecursive = []volumeMountTestCase{
+	// 	{
+	// 		"Read of nested file for non-recursive mount",
+	// 		[]imagePatch{
+	// 			{"rkt-test-run-pod-manifest-recursive-mount-stat.aci", []string{}},
+	// 		},
+	// 		"",
+	// 		&schema.PodManifest{
+	// 			Apps: []schema.RuntimeApp{
+	// 				{
+	// 					Name: baseAppName,
+	// 					App: &types.App{
+	// 						Exec:  []string{"/inspect", "--read-file"},
+	// 						User:  "0",
+	// 						Group: "0",
+	// 						Environment: []types.EnvironmentVariable{
+	// 							{"FILE", mountFilePath},
+	// 						},
+	// 						MountPoints: []types.MountPoint{
+	// 							{mountName, mountDir, false},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 			Volumes: []types.Volume{
+	// 				{Name: mountName, Kind: "host", Source: volDir,
+	// 					ReadOnly: nil, Recursive: &boolFalse,
+	// 					Mode: nil, UID: nil, GID: nil},
+	// 			},
+	// 		},
+	// 		outerFileContent,
+	// 		false,
+	// 	},
+	// }
 
 	volumeMountTestCasesDuplicateVolume = []volumeMountTestCase{
 		{
